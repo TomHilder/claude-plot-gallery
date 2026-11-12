@@ -41,11 +41,29 @@ Needs Python 3.10+ on `PATH` as `python3`. No other dependencies.
 1. Ask Claude to set up a plot gallery in your project (or run
    `python3 skills/plot-gallery/gallery.py init` at the project root
    yourself). This creates `PLOTS.md`, `PLOTS-archive.md` and `.plots.json`.
-2. Open `PLOTS.md` in a markdown preview. In VS Code: open the file, press
-   Cmd/Ctrl-K V, then run **Markdown: Toggle Preview Locking** so the preview
-   stays on the gallery when you open other markdown files.
+2. Open `PLOTS.md` in a **locked** markdown preview (see below), so it stays
+   on the gallery when you open other markdown files.
 3. Work as usual. Claude adds every plot it makes, updates entries when it
    regenerates a plot, and clears throwaway plots at the end of a task.
+
+### Keeping the gallery open in VS Code
+
+A normal markdown preview follows whichever markdown file is active, so it
+jumps away from the gallery as soon as you open another `.md`. Lock it:
+
+- With `PLOTS.md` focused, run **Markdown: Open Locked Preview to the Side**
+  from the command palette. Or open a preview with Cmd/Ctrl-K V, click into
+  it, and run **Markdown: Toggle Preview Locking**. A locked preview's tab
+  reads **[Preview] PLOTS.md**.
+- Other markdown files can still be previewed: Cmd/Ctrl-K V on them opens a
+  second, normal preview alongside the locked gallery.
+- To keep the gallery out of the way, drag it into its own editor group, or
+  right-click its tab and choose **Move into New Window** (e.g. for a second
+  screen).
+- If VS Code restores the preview unlocked after a restart, lock it again.
+
+The preview re-renders when `PLOTS.md` changes and reloads images that are
+overwritten in place, so it never needs to be closed and reopened.
 
 The skill only activates in projects that have a gallery (a `.plots.json` at
 or above the working directory), so it stays out of the way elsewhere.
