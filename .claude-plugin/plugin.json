@@ -1,0 +1,11 @@
+{
+  "name": "plot-gallery",
+  "version": "0.1.0",
+  "description": "A live plot gallery for Claude Code: Claude pins every plot it makes to PLOTS.md, which you keep open in a markdown preview.",
+  "author": {
+    "name": "Tom Hilder"
+  },
+  "repository": "https://github.com/TomHilder/claude-plot-gallery",
+  "license": "MIT",
+  "keywords": ["plots", "figures", "gallery", "data-science", "research"]
+}

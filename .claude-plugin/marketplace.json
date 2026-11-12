@@ -1,0 +1,13 @@
+{
+  "name": "claude-plot-gallery",
+  "owner": {
+    "name": "Tom Hilder"
+  },
+  "plugins": [
+    {
+      "name": "plot-gallery",
+      "source": "./",
+      "description": "A live plot gallery for Claude Code: Claude pins every plot it makes to PLOTS.md, which you keep open in a markdown preview."
+    }
+  ]
+}

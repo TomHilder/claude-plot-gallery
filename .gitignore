@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.DS_Store
+.plots.json
+.plots.lock
+PLOTS.md
+PLOTS-archive.md
