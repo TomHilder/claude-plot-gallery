@@ -19,8 +19,14 @@ Examples
     gallery.py rm figs/resid.png
     gallery.py clear "sky · LSF fix"                # drops its Scratch entries
     gallery.py clear "sky · LSF fix" --cat all      # drops the whole task
-    gallery.py check                                # drop entries whose files are gone
+    gallery.py prune --older 3d                     # archive tasks idle for 3 days
+    gallery.py prune --all [--drop]                 # archive (or delete) every live task
     gallery.py list
+
+Every command also tidies: entries whose files are gone are dropped, and
+Scratch entries older than ``$PLOT_GALLERY_SCRATCH_TTL`` (default ``24h``;
+``never`` to disable) expire, so sessions that die without cleaning up don't
+leave clutter behind.
 """
 
 from __future__ import annotations
@@ -32,7 +38,8 @@ import json
 import os
 import sys
 import tempfile
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 from pathlib import Path
 
 ROOT = STATE = LOCK = GALLERY = ARCHIVE = Path()
@@ -40,6 +47,7 @@ ROOT = STATE = LOCK = GALLERY = ARCHIVE = Path()
 CATEGORIES = ["Results", "Comparisons", "Diagnostics", "Scratch", "Docs"]
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"}
 KEEP_LIVE = 5
+DEFAULT_SCRATCH_TTL = "24h"
 
 HEADER = """# Plots
 
@@ -78,6 +86,37 @@ def now() -> str:
     return datetime.now().isoformat(timespec="microseconds")
 
 
+def parse_duration(text: str) -> timedelta | None:
+    """'90m', '24h', '3d', '2w' (or a bare number of hours); 'never' -> None."""
+    text = text.strip().lower()
+    if text in {"never", "off", "none"}:
+        return None
+    m = re.fullmatch(r"(\d+(?:\.\d+)?)\s*([mhdw]?)", text)
+    if m is None:
+        sys.exit(f"error: can't parse duration {text!r} (use e.g. 90m, 24h, 3d, 2w)")
+    unit = {"m": "minutes", "h": "hours", "": "hours", "d": "days", "w": "weeks"}[m[2]]
+    return timedelta(**{unit: float(m[1])})
+
+
+def age(ts: str) -> timedelta:
+    return datetime.now() - datetime.fromisoformat(ts)
+
+
+def tidy(data: dict) -> None:
+    """Drop entries whose files are gone and expire old Scratch entries."""
+    ttl = parse_duration(os.environ.get("PLOT_GALLERY_SCRATCH_TTL", DEFAULT_SCRATCH_TTL))
+    for t in data["tasks"]:
+        for e in list(t["entries"]):
+            for p in [p for p in e["paths"] if not (ROOT / p).is_file()]:
+                e["paths"].remove(p)
+                print(f"tidy: file gone, removed {p}")
+            if not e["paths"]:
+                t["entries"].remove(e)
+            elif e["cat"] == "Scratch" and ttl is not None and age(e["updated"]) > ttl:
+                t["entries"].remove(e)
+                print(f"tidy: Scratch expired, removed {', '.join(e['paths'])}")
+
+
 def rel(path: str) -> str:
     p = Path(path).expanduser()
     p = (Path.cwd() / p) if not p.is_absolute() else p
@@ -95,6 +134,7 @@ def state():
         fcntl.flock(lock, fcntl.LOCK_EX)
         data = json.loads(STATE.read_text()) if STATE.exists() else {"tasks": []}
         yield data
+        tidy(data)
         archive_old(data)
         write_atomic(STATE, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
         write_atomic(GALLERY, render(data, archived=False))
@@ -246,16 +286,24 @@ def cmd_clear(a) -> None:
             print(f"cleared {n - len(t['entries'])} {a.cat} entries from {a.task}")
 
 
-def cmd_check(a) -> None:
+def cmd_prune(a) -> None:
+    if a.older and a.all:
+        sys.exit("error: use --older or --all, not both")
+    older = parse_duration(a.older) if a.older else None
     with state() as data:
-        for t in data["tasks"]:
-            for e in list(t["entries"]):
-                gone = [p for p in e["paths"] if not (ROOT / p).exists()]
-                for p in gone:
-                    print(f"missing, removed: {p}")
-                    e["paths"].remove(p)
-                if not e["paths"]:
-                    t["entries"].remove(e)
+        live = [t for t in data["tasks"] if not t["archived"]]
+        if a.all:
+            hit = live
+        elif older is not None:
+            hit = [t for t in live if age(t["updated"]) > older]
+        else:
+            hit = []
+        for t in hit:
+            if a.drop:
+                data["tasks"].remove(t)
+            else:
+                t["archived"] = True
+            print(f"{'dropped' if a.drop else 'archived'}: {t['name']}")
 
 
 def cmd_list(a) -> None:
@@ -312,8 +360,13 @@ def main() -> None:
     p.add_argument("--cat", default="Scratch")
     p.set_defaults(func=cmd_clear)
 
-    sub.add_parser("check", help="remove entries whose files no longer exist"
-                   ).set_defaults(func=cmd_check)
+    p = sub.add_parser("prune", help="tidy now; optionally archive/drop live tasks")
+    p.add_argument("--older", metavar="DUR", help="tasks idle longer than DUR (90m, 24h, 3d, 2w)")
+    p.add_argument("--all", action="store_true", help="every live task")
+    p.add_argument("--drop", action="store_true", help="delete instead of archiving")
+    p.set_defaults(func=cmd_prune)
+    sub.add_parser("check", help="tidy now (same as plain prune)"
+                   ).set_defaults(func=cmd_render)
     sub.add_parser("list", help="print the gallery contents").set_defaults(func=cmd_list)
     sub.add_parser("render", help="re-render the markdown from state"
                    ).set_defaults(func=cmd_render)

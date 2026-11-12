@@ -66,9 +66,18 @@ every command, under a file lock so parallel sessions don't clash:
 | `task T --note N` | set a task's one-line description |
 | `rm PATH...` | remove entries (files stay on disk) |
 | `clear T [--cat K\|all]` | drop a task's Scratch entries, a category, or the task |
-| `check` | drop entries whose files no longer exist |
+| `prune [--older DUR \| --all] [--drop]` | archive (or delete) idle or all live tasks |
 | `list` | print the gallery |
 | `init [--root DIR]` | create a gallery |
+
+Every command also tidies, so sessions that are killed before cleaning up
+don't leave clutter: entries whose files are gone are dropped, and Scratch
+entries expire after `$PLOT_GALLERY_SCRATCH_TTL` (default `24h`; e.g. `12h`,
+`3d`, `never`).
+
+To clear the gallery yourself from inside Claude Code, run it with `!`, e.g.
+`! python3 <path-to>/gallery.py prune --all`. A shell alias makes that
+shorter: `alias gallery='python3 <path-to>/skills/plot-gallery/gallery.py'`.
 
 Categories: Results, Comparisons, Diagnostics, Scratch, Docs. Images render
 inline; other files (PDFs, reports) render as links. Only the five most

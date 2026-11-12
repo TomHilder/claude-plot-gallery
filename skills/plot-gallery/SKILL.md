@@ -42,10 +42,16 @@ python3 $G task "<task>" --note "<one line: what question this task answers>"
 python3 $G rm <path> [...]              # unpin (files stay on disk)
 python3 $G clear "<task>"               # drop the task's Scratch entries
 python3 $G clear "<task>" --cat all     # drop the whole task
-python3 $G check                        # drop entries whose files are gone
 python3 $G list
 python3 $G init [--root DIR]            # create a gallery
 ```
+
+Every command also tidies the gallery: entries whose files are gone are
+dropped, and Scratch entries expire after 24h (`$PLOT_GALLERY_SCRATCH_TTL`,
+e.g. `12h`, `3d`, `never`). So a session that is killed before cleaning up
+leaves nothing behind for long. `prune --older DUR` / `prune --all [--drop]`
+archive (or delete) whole tasks; those are mainly for the user, so only run
+them when asked.
 
 Paths may be absolute or relative to the current directory; they must be
 files under the gallery root. Several paths in one `add` share one caption
