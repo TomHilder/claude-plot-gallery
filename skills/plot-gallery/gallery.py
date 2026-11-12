@@ -304,6 +304,12 @@ def cmd_prune(a) -> None:
             else:
                 t["archived"] = True
             print(f"{'dropped' if a.drop else 'archived'}: {t['name']}")
+    with open(STATE) as f:
+        tasks = json.load(f)["tasks"]
+    live = [t for t in tasks if not t["archived"]]
+    n = sum(len(t["entries"]) for t in live)
+    print(f"{GALLERY}: {len(live)} live task(s), {n} entr{'y' if n == 1 else 'ies'}; "
+          f"{len(tasks) - len(live)} archived")
 
 
 def cmd_list(a) -> None:
