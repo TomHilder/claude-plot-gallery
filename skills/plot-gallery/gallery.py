@@ -137,8 +137,21 @@ def state():
         tidy(data)
         archive_old(data)
         write_atomic(STATE, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-        write_atomic(GALLERY, render(data, archived=False))
-        write_atomic(ARCHIVE, render(data, archived=True))
+        write_in_place(GALLERY, render(data, archived=False))
+        write_in_place(ARCHIVE, render(data, archived=True))
+
+
+def write_in_place(path: Path, text: str) -> None:
+    """Overwrite ``path`` keeping its inode, and only if the text changed.
+
+    Markdown previews (VS Code's, notably a locked one) follow the file they
+    opened; an atomic rename replaces it with a new file, which they can miss.
+    The state lock already serialises writers, so atomicity isn't needed here.
+    """
+    if path.exists() and path.read_text() == text:
+        return
+    with open(path, "w") as f:
+        f.write(text)
 
 
 def write_atomic(path: Path, text: str) -> None:
